@@ -20,7 +20,7 @@ public class GameView extends SurfaceView implements Runnable {
 
     private long lastFrameTime;
 
-    private static final int EDGE_MARGIN = 10; // насколько близко к краю экрана считается "дошёл до двери"
+    private static final int EDGE_MARGIN = 10;
 
     public GameView(Context context) {
         super(context);
@@ -107,7 +107,6 @@ public class GameView extends SurfaceView implements Runnable {
         }
     }
 
-    // Игрок появляется у противоположного края новой комнаты
     private void repositionPlayerAfterTransition(Door.Direction directionEntered, int screenWidth, int screenHeight) {
         switch (directionEntered) {
             case LEFT:
