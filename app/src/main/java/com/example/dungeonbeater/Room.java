@@ -19,13 +19,15 @@ public class Room {
     private final List<Enemy> enemies = new ArrayList<>();
 
     private final Paint floorPaint = new Paint();
-    private final Paint doorPaint = new Paint();
+    private final Paint doorOpenPaint = new Paint();
+    private final Paint doorLockedPaint = new Paint();
 
     public Room(int col, int row) {
         this.col = col;
         this.row = row;
         floorPaint.setColor(Color.rgb(40, 40, 45));
-        doorPaint.setColor(Color.rgb(90, 90, 100));
+        doorOpenPaint.setColor(Color.rgb(90, 90, 100));
+        doorLockedPaint.setColor(Color.rgb(140, 50, 50));
     }
 
     public void addDoor(Door door) {
@@ -73,6 +75,8 @@ public class Room {
 
     public void draw(Canvas canvas, int screenWidth, int screenHeight) {
         canvas.drawRect(0, 0, screenWidth, screenHeight, floorPaint);
+
+        Paint doorPaint = isCleared() ? doorOpenPaint : doorLockedPaint;
 
         if (hasDoor(Door.Direction.UP)) {
             canvas.drawRect(screenWidth / 2f - DOOR_SIZE / 2f, 0, screenWidth / 2f + DOOR_SIZE / 2f, 20, doorPaint);
