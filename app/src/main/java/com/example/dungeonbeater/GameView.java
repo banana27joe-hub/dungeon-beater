@@ -20,6 +20,8 @@ public class GameView extends SurfaceView implements Runnable {
     private Player player;
     private RunManager runManager;
 
+    private GameState state = GameState.MENU;
+
     private long lastFrameTime;
 
     private static final int PLAYER_SIZE = 48;
@@ -27,28 +29,64 @@ public class GameView extends SurfaceView implements Runnable {
 
     private final Paint hpBarBg = new Paint();
     private final Paint hpBarFg = new Paint();
+    private final Paint titlePaint = new Paint();
+    private final Paint subtitlePaint = new Paint();
+    private final Paint menuBgPaint = new Paint();
 
     public GameView(Context context) {
         super(context);
         holder = getHolder();
+
         hpBarBg.setColor(Color.rgb(60, 20, 20));
         hpBarFg.setColor(Color.rgb(200, 40, 40));
+
+        menuBgPaint.setColor(Color.rgb(20, 20, 24));
+
+        titlePaint.setColor(Color.rgb(230, 230, 235));
+        titlePaint.setTextSize(90f);
+        titlePaint.setTextAlign(Paint.Align.CENTER);
+        titlePaint.setFakeBoldText(true);
+
+        subtitlePaint.setColor(Color.rgb(160, 160, 170));
+        subtitlePaint.setTextSize(45f);
+        subtitlePaint.setTextAlign(Paint.Align.CENTER);
     }
 
-    private void initEntitiesIfNeeded() {
-        if (player != null) return;
+    private void initControlsIfNeeded() {
+        if (joystick != null) return;
 
         int screenWidth = getWidth();
         int screenHeight = getHeight();
 
         joystick = new VirtualJoystick(180, screenHeight - 180, 120, 60);
         attackButton = new AttackButton(screenWidth - 180, screenHeight - 180, 90);
+    }
+
+    private void startRun() {
+        int screenWidth = getWidth();
+        int screenHeight = getHeight();
+
         player = new Player(screenWidth / 2f, screenHeight / 2f, joystick, attackButton);
         runManager = new RunManager(screenWidth, screenHeight);
+        state = GameState.RUNNING;
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+        if (state == GameState.MENU) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                startRun();
+            }
+            return true;
+        }
+
+        if (state == GameState.GAME_OVER) {
+            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                state = GameState.MENU;
+            }
+            return true;
+        }
+
         if (joystick != null) {
             joystick.handleTouch(event);
         }
@@ -70,7 +108,7 @@ public class GameView extends SurfaceView implements Runnable {
                 continue;
             }
 
-            initEntitiesIfNeeded();
+            initControlsIfNeeded();
 
             long now = System.nanoTime();
             float deltaTime = (now - lastFrameTime) / 1_000_000_000f;
@@ -82,11 +120,16 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     private void update(float deltaTime) {
+        if (state != GameState.RUNNING) return;
         if (player == null || runManager == null) return;
 
         player.update(deltaTime);
         runManager.getCurrentRoom().updateEnemies(deltaTime, player);
         handleWallsAndDoors();
+
+        if (player.isDead()) {
+            state = GameState.GAME_OVER;
+        }
     }
 
     private void handleWallsAndDoors() {
@@ -161,10 +204,34 @@ public class GameView extends SurfaceView implements Runnable {
         Canvas canvas = holder.lockCanvas();
         if (canvas == null) return;
 
+        switch (state) {
+            case MENU:
+                drawMenu(canvas);
+                break;
+            case RUNNING:
+                drawRunning(canvas);
+                break;
+            case GAME_OVER:
+                drawRunning(canvas);
+                drawGameOverOverlay(canvas);
+                break;
+        }
+
+        holder.unlockCanvasAndPost(canvas);
+    }
+
+    private void drawMenu(Canvas canvas) {
+        canvas.drawRect(0, 0, getWidth(), getHeight(), menuBgPaint);
+        float centerX = getWidth() / 2f;
+        float centerY = getHeight() / 2f;
+        canvas.drawText("DUNGEON BEATER", centerX, centerY - 20, titlePaint);
+        canvas.drawText("Нажми, чтобы начать", centerX, centerY + 60, subtitlePaint);
+    }
+
+    private void drawRunning(Canvas canvas) {
         if (runManager != null) {
             runManager.getCurrentRoom().draw(canvas, getWidth(), getHeight());
         }
-
         if (player != null) {
             player.draw(canvas);
             drawHealthBar(canvas);
@@ -175,8 +242,17 @@ public class GameView extends SurfaceView implements Runnable {
         if (attackButton != null) {
             attackButton.draw(canvas);
         }
+    }
 
-        holder.unlockCanvasAndPost(canvas);
+    private void drawGameOverOverlay(Canvas canvas) {
+        Paint overlay = new Paint();
+        overlay.setColor(Color.argb(180, 0, 0, 0));
+        canvas.drawRect(0, 0, getWidth(), getHeight(), overlay);
+
+        float centerX = getWidth() / 2f;
+        float centerY = getHeight() / 2f;
+        canvas.drawText("ТЫ ПОГИБ", centerX, centerY - 20, titlePaint);
+        canvas.drawText("Нажми, чтобы вернуться в меню", centerX, centerY + 60, subtitlePaint);
     }
 
     private void drawHealthBar(Canvas canvas) {
