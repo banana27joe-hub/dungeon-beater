@@ -15,10 +15,13 @@ public class Player extends Entity {
     private final VirtualJoystick joystick;
     private final AttackButton attackButton;
 
+    // Направление, куда игрок смотрит — используется оружием для хитбокса атаки.
+    // По умолчанию смотрит вниз, обновляется только когда есть реальное движение.
     private float facingX = 0f;
     private float facingY = 1f;
 
     private final Paint debugPaint = new Paint();
+    private final Inventory inventory = new Inventory();
 
     public Player(float startX, float startY, VirtualJoystick joystick, AttackButton attackButton) {
         super(startX, startY, 48, 48);
@@ -75,6 +78,10 @@ public class Player extends Entity {
 
     public void setWeapon(Weapon weapon) {
         this.equippedWeapon = weapon;
+    }
+
+    public Inventory getInventory() {
+        return inventory;
     }
 
     public float getFacingX() {
