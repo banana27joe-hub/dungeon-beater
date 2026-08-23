@@ -11,6 +11,8 @@ import java.util.Map;
 
 public class Room {
 
+    public static final int DOOR_SIZE = 80;
+
     private final int col;
     private final int row;
     private final Map<Door.Direction, Door> doors = new EnumMap<>(Door.Direction.class);
@@ -72,19 +74,17 @@ public class Room {
     public void draw(Canvas canvas, int screenWidth, int screenHeight) {
         canvas.drawRect(0, 0, screenWidth, screenHeight, floorPaint);
 
-        int doorSize = 80;
-
         if (hasDoor(Door.Direction.UP)) {
-            canvas.drawRect(screenWidth / 2f - doorSize / 2f, 0, screenWidth / 2f + doorSize / 2f, 20, doorPaint);
+            canvas.drawRect(screenWidth / 2f - DOOR_SIZE / 2f, 0, screenWidth / 2f + DOOR_SIZE / 2f, 20, doorPaint);
         }
         if (hasDoor(Door.Direction.DOWN)) {
-            canvas.drawRect(screenWidth / 2f - doorSize / 2f, screenHeight - 20, screenWidth / 2f + doorSize / 2f, screenHeight, doorPaint);
+            canvas.drawRect(screenWidth / 2f - DOOR_SIZE / 2f, screenHeight - 20, screenWidth / 2f + DOOR_SIZE / 2f, screenHeight, doorPaint);
         }
         if (hasDoor(Door.Direction.LEFT)) {
-            canvas.drawRect(0, screenHeight / 2f - doorSize / 2f, 20, screenHeight / 2f + doorSize / 2f, doorPaint);
+            canvas.drawRect(0, screenHeight / 2f - DOOR_SIZE / 2f, 20, screenHeight / 2f + DOOR_SIZE / 2f, doorPaint);
         }
         if (hasDoor(Door.Direction.RIGHT)) {
-            canvas.drawRect(screenWidth - 20, screenHeight / 2f - doorSize / 2f, screenWidth, screenHeight / 2f + doorSize / 2f, doorPaint);
+            canvas.drawRect(screenWidth - 20, screenHeight / 2f - DOOR_SIZE / 2f, screenWidth, screenHeight / 2f + DOOR_SIZE / 2f, doorPaint);
         }
 
         for (Enemy enemy : enemies) {
