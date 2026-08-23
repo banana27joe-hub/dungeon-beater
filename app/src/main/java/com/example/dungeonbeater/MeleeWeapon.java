@@ -4,7 +4,7 @@ import android.graphics.Rect;
 
 public class MeleeWeapon extends Weapon {
 
-    private static final int RANGE = 60;
+    private static final int RANGE = 50;
 
     public MeleeWeapon() {
         super("Basic Sword", Type.MELEE, 10, 0.4f);
@@ -24,20 +24,8 @@ public class MeleeWeapon extends Weapon {
 
     private Rect buildHitbox(Player owner) {
         Rect playerBox = owner.getHitbox();
-        float fx = owner.getFacingX();
-        float fy = owner.getFacingY();
-
-        int centerX = playerBox.centerX();
-        int centerY = playerBox.centerY();
-
-        int offsetX = (int) (fx * RANGE);
-        int offsetY = (int) (fy * RANGE);
-
-        int left = centerX + offsetX - RANGE / 2;
-        int top = centerY + offsetY - RANGE / 2;
-        int right = left + RANGE;
-        int bottom = top + RANGE;
-
-        return new Rect(left, top, right, bottom);
+        Rect expanded = new Rect(playerBox);
+        expanded.inset(-RANGE, -RANGE);
+        return expanded;
     }
 }
