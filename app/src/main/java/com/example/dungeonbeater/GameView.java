@@ -2,6 +2,8 @@ package com.example.dungeonbeater;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -22,9 +24,14 @@ public class GameView extends SurfaceView implements Runnable {
 
     private static final int EDGE_MARGIN = 10;
 
+    private final Paint hpBarBg = new Paint();
+    private final Paint hpBarFg = new Paint();
+
     public GameView(Context context) {
         super(context);
         holder = getHolder();
+        hpBarBg.setColor(Color.rgb(60, 20, 20));
+        hpBarFg.setColor(Color.rgb(200, 40, 40));
     }
 
     private void initEntitiesIfNeeded() {
@@ -36,7 +43,7 @@ public class GameView extends SurfaceView implements Runnable {
         joystick = new VirtualJoystick(180, screenHeight - 180, 120, 60);
         attackButton = new AttackButton(screenWidth - 180, screenHeight - 180, 90);
         player = new Player(screenWidth / 2f, screenHeight / 2f, joystick, attackButton);
-        runManager = new RunManager();
+        runManager = new RunManager(screenWidth, screenHeight);
     }
 
     @Override
@@ -46,8 +53,8 @@ public class GameView extends SurfaceView implements Runnable {
         }
         if (attackButton != null) {
             boolean attackTriggered = attackButton.handleTouch(event);
-            if (attackTriggered && player != null) {
-                player.tryAttack();
+            if (attackTriggered && player != null && runManager != null) {
+                player.tryAttack(runManager.getCurrentRoom());
             }
         }
         return true;
@@ -74,9 +81,10 @@ public class GameView extends SurfaceView implements Runnable {
     }
 
     private void update(float deltaTime) {
-        if (player == null) return;
+        if (player == null || runManager == null) return;
 
         player.update(deltaTime);
+        runManager.getCurrentRoom().updateEnemies(deltaTime, player);
         checkRoomTransition();
     }
 
@@ -134,6 +142,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         if (player != null) {
             player.draw(canvas);
+            drawHealthBar(canvas);
         }
         if (joystick != null) {
             joystick.draw(canvas);
@@ -143,6 +152,18 @@ public class GameView extends SurfaceView implements Runnable {
         }
 
         holder.unlockCanvasAndPost(canvas);
+    }
+
+    private void drawHealthBar(Canvas canvas) {
+        int barWidth = 300;
+        int barHeight = 30;
+        int left = 40;
+        int top = 40;
+
+        canvas.drawRect(left, top, left + barWidth, top + barHeight, hpBarBg);
+
+        float fraction = player.getHealth().getHpFraction();
+        canvas.drawRect(left, top, left + barWidth * fraction, top + barHeight, hpBarFg);
     }
 
     public void resume() {
