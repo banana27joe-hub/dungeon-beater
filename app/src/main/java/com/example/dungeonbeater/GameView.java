@@ -9,6 +9,8 @@ import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
+import java.util.Random;
+
 public class GameView extends SurfaceView implements Runnable {
 
     private Thread gameThread;
@@ -35,6 +37,9 @@ public class GameView extends SurfaceView implements Runnable {
     private Rect shopButtonRect;
     private Rect shopBackButtonRect;
     private Rect shopItemRect;
+    private Rect potionButtonRect;
+
+    private final Random random = new Random();
 
     private final Paint hpBarBg = new Paint();
     private final Paint hpBarFg = new Paint();
@@ -85,6 +90,7 @@ public class GameView extends SurfaceView implements Runnable {
 
         joystick = new VirtualJoystick(180, screenHeight - 180, 120, 60);
         attackButton = new AttackButton(screenWidth - 180, screenHeight - 180, 90);
+        potionButtonRect = new Rect(40, 130, 340, 195);
     }
 
     private void initMenuLayoutIfNeeded() {
@@ -150,7 +156,18 @@ public class GameView extends SurfaceView implements Runnable {
         return true;
     }
 
+    private static final int POTION_HEAL_AMOUNT = 30;
+
     private void passTouchToControls(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN
+                && potionButtonRect != null
+                && potionButtonRect.contains((int) event.getX(), (int) event.getY())
+                && player != null) {
+            if (player.getInventory().consume("health_potion", 1)) {
+                player.getHealth().heal(POTION_HEAL_AMOUNT);
+            }
+        }
+
         if (joystick != null) {
             joystick.handleTouch(event);
         }
@@ -192,6 +209,7 @@ public class GameView extends SurfaceView implements Runnable {
         runManager.getCurrentRoom().resolveCollisions(player);
         handleWallsAndDoors();
         collectEnemyRewards();
+        runManager.getCurrentRoom().checkPickups(player);
 
         if (player.isDead()) {
             saveManager.addCoins(runManager.getCoins()); // монеты забега сохраняются навсегда
@@ -199,11 +217,18 @@ public class GameView extends SurfaceView implements Runnable {
         }
     }
 
+    private static final float POTION_DROP_CHANCE = 0.3f; // 30% шанс аптечки с убитого врага
+
     private void collectEnemyRewards() {
-        for (Enemy enemy : runManager.getCurrentRoom().getEnemies()) {
+        Room room = runManager.getCurrentRoom();
+        for (Enemy enemy : room.getEnemies()) {
             if (enemy.claimDeathReward()) {
                 runManager.addScore(enemy.getScoreValue());
                 runManager.addCoins(enemy.getCoinValue());
+
+                if (random.nextFloat() < POTION_DROP_CHANCE) {
+                    room.addPickup(new Pickup(enemy.getX(), enemy.getY(), Pickup.Type.HEALTH_POTION));
+                }
             }
         }
     }
@@ -343,6 +368,7 @@ public class GameView extends SurfaceView implements Runnable {
             player.draw(canvas);
             drawHealthBar(canvas);
             drawScoreAndCoins(canvas);
+            drawPotionButton(canvas);
         }
         if (joystick != null) {
             joystick.draw(canvas);
@@ -384,6 +410,13 @@ public class GameView extends SurfaceView implements Runnable {
         canvas.drawText(text, 40, 105, hudTextPaint);
     }
 
+    private void drawPotionButton(Canvas canvas) {
+        if (potionButtonRect == null || player == null) return;
+        canvas.drawRect(potionButtonRect, itemBoxPaint);
+        String text = "Аптечки: " + player.getInventory().getCount("health_potion") + " (тап)";
+        canvas.drawText(text, potionButtonRect.left + 15, potionButtonRect.centerY() + 12, hudTextPaint);
+    }
+
     public void resume() {
         running = true;
         gameThread = new Thread(this);
@@ -400,4 +433,4 @@ public class GameView extends SurfaceView implements Runnable {
             Thread.currentThread().interrupt();
         }
     }
-}
+                             }
