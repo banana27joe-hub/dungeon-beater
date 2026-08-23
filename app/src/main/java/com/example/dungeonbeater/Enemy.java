@@ -12,6 +12,8 @@ public class Enemy extends Entity {
     private float contactCooldownTimer = 0f;
     private static final float CONTACT_COOLDOWN = 0.6f;
 
+    private boolean rewardClaimed = false;
+
     public Enemy(float x, float y, EnemyTheme theme) {
         super(x, y, 40, 40);
         this.theme = theme;
@@ -47,6 +49,22 @@ public class Enemy extends Entity {
 
     public boolean isDead() {
         return health.isDead();
+    }
+
+    public boolean claimDeathReward() {
+        if (isDead() && !rewardClaimed) {
+            rewardClaimed = true;
+            return true;
+        }
+        return false;
+    }
+
+    public int getScoreValue() {
+        return theme.scoreValue;
+    }
+
+    public int getCoinValue() {
+        return theme.coinValue;
     }
 
     @Override
