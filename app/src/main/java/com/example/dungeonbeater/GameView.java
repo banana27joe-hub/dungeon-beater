@@ -32,6 +32,7 @@ public class GameView extends SurfaceView implements Runnable {
     private final Paint titlePaint = new Paint();
     private final Paint subtitlePaint = new Paint();
     private final Paint menuBgPaint = new Paint();
+    private final Paint hudTextPaint = new Paint();
 
     public GameView(Context context) {
         super(context);
@@ -50,6 +51,9 @@ public class GameView extends SurfaceView implements Runnable {
         subtitlePaint.setColor(Color.rgb(160, 160, 170));
         subtitlePaint.setTextSize(45f);
         subtitlePaint.setTextAlign(Paint.Align.CENTER);
+
+        hudTextPaint.setColor(Color.rgb(230, 230, 230));
+        hudTextPaint.setTextSize(38f);
     }
 
     private void initControlsIfNeeded() {
@@ -126,9 +130,19 @@ public class GameView extends SurfaceView implements Runnable {
         player.update(deltaTime);
         runManager.getCurrentRoom().updateEnemies(deltaTime, player);
         handleWallsAndDoors();
+        collectEnemyRewards();
 
         if (player.isDead()) {
             state = GameState.GAME_OVER;
+        }
+    }
+
+    private void collectEnemyRewards() {
+        for (Enemy enemy : runManager.getCurrentRoom().getEnemies()) {
+            if (enemy.claimDeathReward()) {
+                runManager.addScore(enemy.getScoreValue());
+                runManager.addCoins(enemy.getCoinValue());
+            }
         }
     }
 
@@ -235,6 +249,7 @@ public class GameView extends SurfaceView implements Runnable {
         if (player != null) {
             player.draw(canvas);
             drawHealthBar(canvas);
+            drawScoreAndCoins(canvas);
         }
         if (joystick != null) {
             joystick.draw(canvas);
@@ -252,7 +267,11 @@ public class GameView extends SurfaceView implements Runnable {
         float centerX = getWidth() / 2f;
         float centerY = getHeight() / 2f;
         canvas.drawText("ТЫ ПОГИБ", centerX, centerY - 20, titlePaint);
-        canvas.drawText("Нажми, чтобы вернуться в меню", centerX, centerY + 60, subtitlePaint);
+        if (runManager != null) {
+            String result = "Счёт: " + runManager.getScore() + "   Монеты: " + runManager.getCoins();
+            canvas.drawText(result, centerX, centerY + 50, subtitlePaint);
+        }
+        canvas.drawText("Нажми, чтобы вернуться в меню", centerX, centerY + 110, subtitlePaint);
     }
 
     private void drawHealthBar(Canvas canvas) {
@@ -265,6 +284,11 @@ public class GameView extends SurfaceView implements Runnable {
 
         float fraction = player.getHealth().getHpFraction();
         canvas.drawRect(left, top, left + barWidth * fraction, top + barHeight, hpBarFg);
+    }
+
+    private void drawScoreAndCoins(Canvas canvas) {
+        String text = "Score: " + runManager.getScore() + "   Coins: " + runManager.getCoins();
+        canvas.drawText(text, 40, 105, hudTextPaint);
     }
 
     public void resume() {
