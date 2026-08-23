@@ -6,9 +6,10 @@ import java.util.Random;
 
 public class RoomGenerator {
 
-    public static Map<String, Room> generateFloor(int targetRoomCount) {
+    private static final Random random = new Random();
+
+    public static Map<String, Room> generateFloor(int targetRoomCount, int screenWidth, int screenHeight) {
         Map<String, Room> rooms = new HashMap<>();
-        Random random = new Random();
 
         int col = 0;
         int row = 0;
@@ -45,7 +46,26 @@ public class RoomGenerator {
             connectIfNeighborExists(rooms, room, Door.Direction.RIGHT);
         }
 
+        for (Room room : rooms.values()) {
+            if (room.getCol() == 0 && room.getRow() == 0) continue;
+            spawnEnemiesForRoom(room, screenWidth, screenHeight);
+        }
+
         return rooms;
+    }
+
+    private static void spawnEnemiesForRoom(Room room, int screenWidth, int screenHeight) {
+        EnemyTheme[] themes = EnemyTheme.values();
+        EnemyTheme theme = themes[random.nextInt(themes.length)];
+
+        int enemyCount = 2 + random.nextInt(3);
+        int margin = 150;
+
+        for (int i = 0; i < enemyCount; i++) {
+            float x = margin + random.nextFloat() * (screenWidth - margin * 2f);
+            float y = margin + random.nextFloat() * (screenHeight - margin * 2f);
+            room.addEnemy(new Enemy(x, y, theme));
+        }
     }
 
     private static void connectIfNeighborExists(Map<String, Room> rooms, Room room, Door.Direction direction) {
