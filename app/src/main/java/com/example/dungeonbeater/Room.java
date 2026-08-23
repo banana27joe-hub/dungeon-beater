@@ -6,6 +6,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ public class Room {
     private final int row;
     private final Map<Door.Direction, Door> doors = new EnumMap<>(Door.Direction.class);
     private final List<Enemy> enemies = new ArrayList<>();
+    private final List<Pickup> pickups = new ArrayList<>();
 
     private final Paint floorPaint = new Paint();
     private final Paint doorOpenPaint = new Paint();
@@ -74,6 +76,26 @@ public class Room {
         }
     }
 
+    public void addPickup(Pickup pickup) {
+        pickups.add(pickup);
+    }
+
+    // Игрок подбирает предметы, до которых дотронулся — предмет уходит с пола в инвентарь
+    public void checkPickups(Player player) {
+        Iterator<Pickup> iterator = pickups.iterator();
+        while (iterator.hasNext()) {
+            Pickup pickup = iterator.next();
+            if (pickup.collidesWith(player)) {
+                if (pickup.getType() == Pickup.Type.HEALTH_POTION) {
+                    player.getInventory().add("health_potion", 1);
+                }
+                iterator.remove();
+            }
+        }
+    }
+
+    // Расталкивает пересекающиеся сущности: враг-враг и враг-игрок,
+    // чтобы они не накладывались друг на друга визуально
     public void resolveCollisions(Player player) {
         for (int i = 0; i < enemies.size(); i++) {
             Enemy e1 = enemies.get(i);
@@ -106,10 +128,11 @@ public class Room {
         float dy = by - ay;
         float dist = (float) Math.sqrt(dx * dx + dy * dy);
 
-        if (dist >= minDist) return;
+        if (dist >= minDist) return; // не пересекаются
 
         float nx, ny;
         if (dist < 0.0001f) {
+            // центры совпали — расталкиваем в произвольном направлении, чтобы избежать деления на 0
             nx = 1f;
             ny = 0f;
             dist = 0.0001f;
@@ -141,6 +164,10 @@ public class Room {
         }
         if (hasDoor(Door.Direction.RIGHT)) {
             canvas.drawRect(screenWidth - 20, screenHeight / 2f - DOOR_SIZE / 2f, screenWidth, screenHeight / 2f + DOOR_SIZE / 2f, doorPaint);
+        }
+
+        for (Pickup pickup : pickups) {
+            pickup.draw(canvas);
         }
 
         for (Enemy enemy : enemies) {
