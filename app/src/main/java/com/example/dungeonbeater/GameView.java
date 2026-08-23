@@ -22,7 +22,8 @@ public class GameView extends SurfaceView implements Runnable {
 
     private long lastFrameTime;
 
-    private static final int EDGE_MARGIN = 10;
+    private static final int PLAYER_SIZE = 48;
+    private static final int REPOSITION_MARGIN = 10;
 
     private final Paint hpBarBg = new Paint();
     private final Paint hpBarFg = new Paint();
@@ -85,49 +86,73 @@ public class GameView extends SurfaceView implements Runnable {
 
         player.update(deltaTime);
         runManager.getCurrentRoom().updateEnemies(deltaTime, player);
-        checkRoomTransition();
+        handleWallsAndDoors();
     }
 
-    private void checkRoomTransition() {
+    private void handleWallsAndDoors() {
         int screenWidth = getWidth();
         int screenHeight = getHeight();
+        Room room = runManager.getCurrentRoom();
 
         float px = player.getX();
         float py = player.getY();
 
-        Door.Direction direction = null;
-
-        if (px <= EDGE_MARGIN) {
-            direction = Door.Direction.LEFT;
-        } else if (px + 48 >= screenWidth - EDGE_MARGIN) {
-            direction = Door.Direction.RIGHT;
-        } else if (py <= EDGE_MARGIN) {
-            direction = Door.Direction.UP;
-        } else if (py + 48 >= screenHeight - EDGE_MARGIN) {
-            direction = Door.Direction.DOWN;
+        if (px <= 0) {
+            if (room.hasDoor(Door.Direction.LEFT) && isWithinDoorway(py, screenHeight)
+                    && runManager.tryMoveThroughDoor(Door.Direction.LEFT)) {
+                repositionPlayerAfterTransition(Door.Direction.LEFT, screenWidth, screenHeight);
+            } else {
+                player.setPosition(0, py);
+            }
+        } else if (px + PLAYER_SIZE >= screenWidth) {
+            if (room.hasDoor(Door.Direction.RIGHT) && isWithinDoorway(py, screenHeight)
+                    && runManager.tryMoveThroughDoor(Door.Direction.RIGHT)) {
+                repositionPlayerAfterTransition(Door.Direction.RIGHT, screenWidth, screenHeight);
+            } else {
+                player.setPosition(screenWidth - PLAYER_SIZE, py);
+            }
         }
 
-        if (direction == null) return;
+        px = player.getX();
+        py = player.getY();
+        room = runManager.getCurrentRoom();
 
-        boolean moved = runManager.tryMoveThroughDoor(direction);
-        if (moved) {
-            repositionPlayerAfterTransition(direction, screenWidth, screenHeight);
+        if (py <= 0) {
+            if (room.hasDoor(Door.Direction.UP) && isWithinDoorway(px, screenWidth)
+                    && runManager.tryMoveThroughDoor(Door.Direction.UP)) {
+                repositionPlayerAfterTransition(Door.Direction.UP, screenWidth, screenHeight);
+            } else {
+                player.setPosition(px, 0);
+            }
+        } else if (py + PLAYER_SIZE >= screenHeight) {
+            if (room.hasDoor(Door.Direction.DOWN) && isWithinDoorway(px, screenWidth)
+                    && runManager.tryMoveThroughDoor(Door.Direction.DOWN)) {
+                repositionPlayerAfterTransition(Door.Direction.DOWN, screenWidth, screenHeight);
+            } else {
+                player.setPosition(px, screenHeight - PLAYER_SIZE);
+            }
         }
+    }
+
+    private boolean isWithinDoorway(float coord, int totalSize) {
+        float center = coord + PLAYER_SIZE / 2f;
+        float doorCenter = totalSize / 2f;
+        return Math.abs(center - doorCenter) <= Room.DOOR_SIZE / 2f;
     }
 
     private void repositionPlayerAfterTransition(Door.Direction directionEntered, int screenWidth, int screenHeight) {
         switch (directionEntered) {
             case LEFT:
-                player.setPosition(screenWidth - EDGE_MARGIN - 48, player.getY());
+                player.setPosition(screenWidth - REPOSITION_MARGIN - PLAYER_SIZE, player.getY());
                 break;
             case RIGHT:
-                player.setPosition(EDGE_MARGIN, player.getY());
+                player.setPosition(REPOSITION_MARGIN, player.getY());
                 break;
             case UP:
-                player.setPosition(player.getX(), screenHeight - EDGE_MARGIN - 48);
+                player.setPosition(player.getX(), screenHeight - REPOSITION_MARGIN - PLAYER_SIZE);
                 break;
             case DOWN:
-                player.setPosition(player.getX(), EDGE_MARGIN);
+                player.setPosition(player.getX(), REPOSITION_MARGIN);
                 break;
         }
     }
