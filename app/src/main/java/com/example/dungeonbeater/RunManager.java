@@ -9,8 +9,8 @@ public class RunManager {
     private final Map<String, Room> rooms;
     private Room currentRoom;
 
-    public RunManager() {
-        rooms = RoomGenerator.generateFloor(ROOMS_PER_FLOOR);
+    public RunManager(int screenWidth, int screenHeight) {
+        rooms = RoomGenerator.generateFloor(ROOMS_PER_FLOOR, screenWidth, screenHeight);
         currentRoom = rooms.get(RoomGenerator.key(0, 0));
     }
 
