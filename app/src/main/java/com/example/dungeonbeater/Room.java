@@ -3,6 +3,7 @@ package com.example.dungeonbeater;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 
 import java.util.ArrayList;
 import java.util.EnumMap;
@@ -71,6 +72,57 @@ public class Room {
         for (Enemy enemy : enemies) {
             enemy.updateAI(deltaTime, player);
         }
+    }
+
+    public void resolveCollisions(Player player) {
+        for (int i = 0; i < enemies.size(); i++) {
+            Enemy e1 = enemies.get(i);
+            if (e1.isDead()) continue;
+
+            for (int j = i + 1; j < enemies.size(); j++) {
+                Enemy e2 = enemies.get(j);
+                if (e2.isDead()) continue;
+                separate(e1, e2);
+            }
+
+            separate(e1, player);
+        }
+    }
+
+    private void separate(Entity a, Entity b) {
+        Rect ra = a.getHitbox();
+        Rect rb = b.getHitbox();
+
+        float ax = ra.centerX();
+        float ay = ra.centerY();
+        float bx = rb.centerX();
+        float by = rb.centerY();
+
+        float radiusA = ra.width() / 2f;
+        float radiusB = rb.width() / 2f;
+        float minDist = radiusA + radiusB;
+
+        float dx = bx - ax;
+        float dy = by - ay;
+        float dist = (float) Math.sqrt(dx * dx + dy * dy);
+
+        if (dist >= minDist) return;
+
+        float nx, ny;
+        if (dist < 0.0001f) {
+            nx = 1f;
+            ny = 0f;
+            dist = 0.0001f;
+        } else {
+            nx = dx / dist;
+            ny = dy / dist;
+        }
+
+        float overlap = minDist - dist;
+        float half = overlap / 2f;
+
+        a.setPosition(a.getX() - nx * half, a.getY() - ny * half);
+        b.setPosition(b.getX() + nx * half, b.getY() + ny * half);
     }
 
     public void draw(Canvas canvas, int screenWidth, int screenHeight) {
