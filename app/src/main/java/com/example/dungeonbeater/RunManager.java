@@ -9,6 +9,9 @@ public class RunManager {
     private final Map<String, Room> rooms;
     private Room currentRoom;
 
+    private int score = 0;
+    private int coins = 0;
+
     public RunManager(int screenWidth, int screenHeight) {
         rooms = RoomGenerator.generateFloor(ROOMS_PER_FLOOR, screenWidth, screenHeight);
         currentRoom = rooms.get(RoomGenerator.key(0, 0));
@@ -31,5 +34,21 @@ public class RunManager {
 
         currentRoom = nextRoom;
         return true;
+    }
+
+    public void addScore(int amount) {
+        score += amount;
+    }
+
+    public void addCoins(int amount) {
+        coins += amount;
+    }
+
+    public int getScore() {
+        return score;
+    }
+
+    public int getCoins() {
+        return coins;
     }
 }
