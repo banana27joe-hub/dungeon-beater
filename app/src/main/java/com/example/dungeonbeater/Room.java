@@ -4,7 +4,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
+import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.List;
 import java.util.Map;
 
 public class Room {
@@ -12,8 +14,7 @@ public class Room {
     private final int col;
     private final int row;
     private final Map<Door.Direction, Door> doors = new EnumMap<>(Door.Direction.class);
-
-    private boolean cleared = true;
+    private final List<Enemy> enemies = new ArrayList<>();
 
     private final Paint floorPaint = new Paint();
     private final Paint doorPaint = new Paint();
@@ -45,8 +46,27 @@ public class Room {
         return row;
     }
 
+    public void addEnemy(Enemy enemy) {
+        enemies.add(enemy);
+    }
+
+    public List<Enemy> getEnemies() {
+        return enemies;
+    }
+
     public boolean isCleared() {
-        return cleared;
+        for (Enemy enemy : enemies) {
+            if (!enemy.isDead()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public void updateEnemies(float deltaTime, Player player) {
+        for (Enemy enemy : enemies) {
+            enemy.updateAI(deltaTime, player);
+        }
     }
 
     public void draw(Canvas canvas, int screenWidth, int screenHeight) {
@@ -65,6 +85,10 @@ public class Room {
         }
         if (hasDoor(Door.Direction.RIGHT)) {
             canvas.drawRect(screenWidth - 20, screenHeight / 2f - doorSize / 2f, screenWidth, screenHeight / 2f + doorSize / 2f, doorPaint);
+        }
+
+        for (Enemy enemy : enemies) {
+            enemy.draw(canvas);
         }
     }
 }
