@@ -15,6 +15,9 @@ public class Player extends Entity {
     private final VirtualJoystick joystick;
     private final AttackButton attackButton;
 
+    private float facingX = 0f;
+    private float facingY = 1f;
+
     private final Paint debugPaint = new Paint();
 
     public Player(float startX, float startY, VirtualJoystick joystick, AttackButton attackButton) {
@@ -36,6 +39,12 @@ public class Player extends Entity {
         float dx = joystick.getDirectionX();
         float dy = joystick.getDirectionY();
 
+        if (dx != 0f || dy != 0f) {
+            float len = (float) Math.sqrt(dx * dx + dy * dy);
+            facingX = dx / len;
+            facingY = dy / len;
+        }
+
         x += dx * SPEED * deltaTime;
         y += dy * SPEED * deltaTime;
 
@@ -44,11 +53,11 @@ public class Player extends Entity {
         }
     }
 
-    public void tryAttack() {
+    public void tryAttack(Room currentRoom) {
         if (health.isDead()) return;
         if (attackCooldownTimer > 0f) return;
 
-        equippedWeapon.performAttack(this);
+        equippedWeapon.performAttack(this, currentRoom);
         attackCooldownTimer = equippedWeapon.getAttackCooldown();
     }
 
@@ -66,6 +75,14 @@ public class Player extends Entity {
 
     public void setWeapon(Weapon weapon) {
         this.equippedWeapon = weapon;
+    }
+
+    public float getFacingX() {
+        return facingX;
+    }
+
+    public float getFacingY() {
+        return facingY;
     }
 
     @Override
