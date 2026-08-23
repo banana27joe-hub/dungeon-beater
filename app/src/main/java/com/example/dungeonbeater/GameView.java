@@ -30,6 +30,7 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int PLAYER_SIZE = 48;
     private static final int REPOSITION_MARGIN = 10;
 
+    // Кликабельные зоны меню/магазина — вычисляются один раз, когда известен размер экрана
     private Rect playButtonRect;
     private Rect shopButtonRect;
     private Rect shopBackButtonRect;
@@ -111,6 +112,7 @@ public class GameView extends SurfaceView implements Runnable {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (event.getActionMasked() != MotionEvent.ACTION_DOWN) {
+            // Для RUNNING всё равно нужно прокидывать все события (move/up) в джойстик/кнопку
             if (state == GameState.RUNNING) {
                 passTouchToControls(event);
             }
@@ -133,7 +135,7 @@ public class GameView extends SurfaceView implements Runnable {
                 if (shopBackButtonRect != null && shopBackButtonRect.contains(tx, ty)) {
                     state = GameState.MENU;
                 } else if (shopItemRect != null && shopItemRect.contains(tx, ty)) {
-                    saveManager.spendCoins(placeholderItem.getCost());
+                    saveManager.spendCoins(placeholderItem.getCost()); // просто списывает, ничего не даёт взамен
                 }
                 break;
 
@@ -189,9 +191,10 @@ public class GameView extends SurfaceView implements Runnable {
         runManager.getCurrentRoom().updateEnemies(deltaTime, player);
         runManager.getCurrentRoom().resolveCollisions(player);
         handleWallsAndDoors();
+        collectEnemyRewards();
 
         if (player.isDead()) {
-            saveManager.addCoins(runManager.getCoins());
+            saveManager.addCoins(runManager.getCoins()); // монеты забега сохраняются навсегда
             state = GameState.GAME_OVER;
         }
     }
