@@ -22,6 +22,10 @@ public class RunManager {
     }
 
     public boolean tryMoveThroughDoor(Door.Direction direction) {
+        if (!currentRoom.isCleared()) {
+            return false;
+        }
+
         Door door = currentRoom.getDoor(direction);
         if (door == null || door.isLocked()) {
             return false;
