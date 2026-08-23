@@ -19,7 +19,7 @@ public abstract class Weapon {
         this.attackCooldown = attackCooldown;
     }
 
-    public abstract void performAttack(Player owner);
+    public abstract void performAttack(Player owner, Room room);
 
     public Type getType() {
         return type;
