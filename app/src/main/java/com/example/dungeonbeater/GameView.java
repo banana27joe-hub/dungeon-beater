@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.view.MotionEvent;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -14,6 +15,8 @@ public class GameView extends SurfaceView implements Runnable {
     private volatile boolean running = false;
 
     private final SurfaceHolder holder;
+    private final SaveManager saveManager;
+    private final ShopItem placeholderItem = new ShopItem("??? Пустой предмет", 20);
 
     private VirtualJoystick joystick;
     private AttackButton attackButton;
@@ -27,16 +30,25 @@ public class GameView extends SurfaceView implements Runnable {
     private static final int PLAYER_SIZE = 48;
     private static final int REPOSITION_MARGIN = 10;
 
+    private Rect playButtonRect;
+    private Rect shopButtonRect;
+    private Rect shopBackButtonRect;
+    private Rect shopItemRect;
+
     private final Paint hpBarBg = new Paint();
     private final Paint hpBarFg = new Paint();
     private final Paint titlePaint = new Paint();
     private final Paint subtitlePaint = new Paint();
     private final Paint menuBgPaint = new Paint();
     private final Paint hudTextPaint = new Paint();
+    private final Paint buttonPaint = new Paint();
+    private final Paint buttonTextPaint = new Paint();
+    private final Paint itemBoxPaint = new Paint();
 
     public GameView(Context context) {
         super(context);
         holder = getHolder();
+        saveManager = new SaveManager(context);
 
         hpBarBg.setColor(Color.rgb(60, 20, 20));
         hpBarFg.setColor(Color.rgb(200, 40, 40));
@@ -54,6 +66,14 @@ public class GameView extends SurfaceView implements Runnable {
 
         hudTextPaint.setColor(Color.rgb(230, 230, 230));
         hudTextPaint.setTextSize(38f);
+
+        buttonPaint.setColor(Color.rgb(55, 55, 65));
+
+        buttonTextPaint.setColor(Color.rgb(230, 230, 235));
+        buttonTextPaint.setTextSize(48f);
+        buttonTextPaint.setTextAlign(Paint.Align.CENTER);
+
+        itemBoxPaint.setColor(Color.rgb(45, 45, 55));
     }
 
     private void initControlsIfNeeded() {
@@ -64,6 +84,19 @@ public class GameView extends SurfaceView implements Runnable {
 
         joystick = new VirtualJoystick(180, screenHeight - 180, 120, 60);
         attackButton = new AttackButton(screenWidth - 180, screenHeight - 180, 90);
+    }
+
+    private void initMenuLayoutIfNeeded() {
+        if (playButtonRect != null) return;
+
+        int cx = getWidth() / 2;
+        int cy = getHeight() / 2;
+
+        playButtonRect = new Rect(cx - 220, cy + 10, cx + 220, cy + 90);
+        shopButtonRect = new Rect(cx - 220, cy + 110, cx + 220, cy + 190);
+
+        shopBackButtonRect = new Rect(40, 40, 240, 110);
+        shopItemRect = new Rect(cx - 220, cy - 90, cx + 220, cy + 90);
     }
 
     private void startRun() {
@@ -77,20 +110,45 @@ public class GameView extends SurfaceView implements Runnable {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        if (state == GameState.MENU) {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
-                startRun();
+        if (event.getActionMasked() != MotionEvent.ACTION_DOWN) {
+            if (state == GameState.RUNNING) {
+                passTouchToControls(event);
             }
             return true;
         }
 
-        if (state == GameState.GAME_OVER) {
-            if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+        int tx = (int) event.getX();
+        int ty = (int) event.getY();
+
+        switch (state) {
+            case MENU:
+                if (playButtonRect != null && playButtonRect.contains(tx, ty)) {
+                    startRun();
+                } else if (shopButtonRect != null && shopButtonRect.contains(tx, ty)) {
+                    state = GameState.SHOP;
+                }
+                break;
+
+            case SHOP:
+                if (shopBackButtonRect != null && shopBackButtonRect.contains(tx, ty)) {
+                    state = GameState.MENU;
+                } else if (shopItemRect != null && shopItemRect.contains(tx, ty)) {
+                    saveManager.spendCoins(placeholderItem.getCost());
+                }
+                break;
+
+            case GAME_OVER:
                 state = GameState.MENU;
-            }
-            return true;
-        }
+                break;
 
+            case RUNNING:
+                passTouchToControls(event);
+                break;
+        }
+        return true;
+    }
+
+    private void passTouchToControls(MotionEvent event) {
         if (joystick != null) {
             joystick.handleTouch(event);
         }
@@ -100,7 +158,6 @@ public class GameView extends SurfaceView implements Runnable {
                 player.tryAttack(runManager.getCurrentRoom());
             }
         }
-        return true;
     }
 
     @Override
@@ -113,6 +170,7 @@ public class GameView extends SurfaceView implements Runnable {
             }
 
             initControlsIfNeeded();
+            initMenuLayoutIfNeeded();
 
             long now = System.nanoTime();
             float deltaTime = (now - lastFrameTime) / 1_000_000_000f;
@@ -133,6 +191,7 @@ public class GameView extends SurfaceView implements Runnable {
         collectEnemyRewards();
 
         if (player.isDead()) {
+            saveManager.addCoins(runManager.getCoins());
             state = GameState.GAME_OVER;
         }
     }
@@ -222,6 +281,9 @@ public class GameView extends SurfaceView implements Runnable {
             case MENU:
                 drawMenu(canvas);
                 break;
+            case SHOP:
+                drawShop(canvas);
+                break;
             case RUNNING:
                 drawRunning(canvas);
                 break;
@@ -237,9 +299,37 @@ public class GameView extends SurfaceView implements Runnable {
     private void drawMenu(Canvas canvas) {
         canvas.drawRect(0, 0, getWidth(), getHeight(), menuBgPaint);
         float centerX = getWidth() / 2f;
-        float centerY = getHeight() / 2f;
-        canvas.drawText("DUNGEON BEATER", centerX, centerY - 20, titlePaint);
-        canvas.drawText("Нажми, чтобы начать", centerX, centerY + 60, subtitlePaint);
+
+        canvas.drawText("DUNGEON BEATER", centerX, getHeight() / 2f - 60, titlePaint);
+        canvas.drawText("Монеты: " + saveManager.getCoins(), centerX, getHeight() / 2f - 10, subtitlePaint);
+
+        if (playButtonRect != null) {
+            canvas.drawRect(playButtonRect, buttonPaint);
+            canvas.drawText("ИГРАТЬ", centerX, playButtonRect.centerY() + 16, buttonTextPaint);
+        }
+        if (shopButtonRect != null) {
+            canvas.drawRect(shopButtonRect, buttonPaint);
+            canvas.drawText("МАГАЗИН", centerX, shopButtonRect.centerY() + 16, buttonTextPaint);
+        }
+    }
+
+    private void drawShop(Canvas canvas) {
+        canvas.drawRect(0, 0, getWidth(), getHeight(), menuBgPaint);
+        float centerX = getWidth() / 2f;
+
+        if (shopBackButtonRect != null) {
+            canvas.drawRect(shopBackButtonRect, buttonPaint);
+            canvas.drawText("< Назад", shopBackButtonRect.centerX(), shopBackButtonRect.centerY() + 14, buttonTextPaint);
+        }
+
+        canvas.drawText("МАГАЗИН", centerX, 220, titlePaint);
+        canvas.drawText("Монеты: " + saveManager.getCoins(), centerX, 280, subtitlePaint);
+
+        if (shopItemRect != null) {
+            canvas.drawRect(shopItemRect, itemBoxPaint);
+            canvas.drawText(placeholderItem.getName(), centerX, shopItemRect.centerY() - 10, buttonTextPaint);
+            canvas.drawText("Цена: " + placeholderItem.getCost(), centerX, shopItemRect.centerY() + 50, subtitlePaint);
+        }
     }
 
     private void drawRunning(Canvas canvas) {
@@ -268,7 +358,7 @@ public class GameView extends SurfaceView implements Runnable {
         float centerY = getHeight() / 2f;
         canvas.drawText("ТЫ ПОГИБ", centerX, centerY - 20, titlePaint);
         if (runManager != null) {
-            String result = "Счёт: " + runManager.getScore() + "   Монеты: " + runManager.getCoins();
+            String result = "Счёт: " + runManager.getScore() + "   Монеты за забег: " + runManager.getCoins();
             canvas.drawText(result, centerX, centerY + 50, subtitlePaint);
         }
         canvas.drawText("Нажми, чтобы вернуться в меню", centerX, centerY + 110, subtitlePaint);
