@@ -187,8 +187,8 @@ public class GameView extends SurfaceView implements Runnable {
 
         player.update(deltaTime);
         runManager.getCurrentRoom().updateEnemies(deltaTime, player);
+        runManager.getCurrentRoom().resolveCollisions(player);
         handleWallsAndDoors();
-        collectEnemyRewards();
 
         if (player.isDead()) {
             saveManager.addCoins(runManager.getCoins());
